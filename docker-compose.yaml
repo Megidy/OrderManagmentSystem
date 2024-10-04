@@ -1,11 +1,41 @@
-
 services:
+  zookeeper:
+    restart: always
+    container_name: kafka-like-zookeeper
+    image: docker.io/bitnami/zookeeper:3.8
+    ports:
+      - "2181:2181"
+    volumes:
+      - "zookeeper-volume:/bitnami"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+
+  kafka:
+    restart: always
+    container_name: kafka-like
+    image: docker.io/bitnami/kafka:3.3
+    ports:
+      - "9093:9093"
+    volumes:
+      - "kafka-volume:/bitnami"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=CLIENT://:9092,EXTERNAL://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=CLIENT://kafka:9092,EXTERNAL://localhost:9093
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=CLIENT
+    depends_on:
+      - zookeeper
+
   mysql:
     image: mysql:8.0
     ports:
       - "3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: password 
+
   api:
     build:
       context: . 
@@ -14,3 +44,18 @@ services:
       - "8080:8080"
     depends_on:
       - mysql
+    command: ["/app"]  # Запускаємо основний сервіс (продюсер ордерів)
+
+  kitchen:
+    build:
+      context: . 
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    depends_on:
+      - kafka
+    command: ["/kitchen"]  # Запускаємо консюмер Kitchen
+
+volumes:
+  zookeeper-volume:
+  kafka-volume:
