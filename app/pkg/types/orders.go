@@ -14,7 +14,7 @@ type Dish struct {
 }
 
 type Order struct {
-	CustomersId int       `json:"id"`
+	CustomersId string    `json:"id"`
 	Dishes      []Dish    `json:"dishes"`
 	Created     time.Time `json:"created"`
 	Status      string    `json:"status"`
