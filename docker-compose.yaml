@@ -15,6 +15,7 @@ services:
     container_name: kafka-like
     image: docker.io/bitnami/kafka:3.3
     ports:
+      - "9092:9092"  
       - "9093:9093"
     volumes:
       - "kafka-volume:/bitnami"
@@ -23,7 +24,7 @@ services:
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
       - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
-      - KAFKA_CFG_LISTENERS=CLIENT://:9092,EXTERNAL://:9093
+      - KAFKA_CFG_LISTENERS=CLIENT://0.0.0.0:9092,EXTERNAL://0.0.0.0:9093  
       - KAFKA_CFG_ADVERTISED_LISTENERS=CLIENT://kafka:9092,EXTERNAL://localhost:9093
       - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=CLIENT
     depends_on:
@@ -35,7 +36,6 @@ services:
       - "3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: password 
-
   api:
     build:
       context: . 
@@ -44,7 +44,7 @@ services:
       - "8080:8080"
     depends_on:
       - mysql
-    command: ["/app"]  # Запускаємо основний сервіс (продюсер ордерів)
+    command: ["/app"]  
 
   kitchen:
     build:
@@ -54,7 +54,8 @@ services:
       - "8081:8080"
     depends_on:
       - kafka
-    command: ["/kitchen"]  # Запускаємо консюмер Kitchen
+    command: >
+      sh -c "until nc -z kafka 9092; do echo waiting for kafka; sleep 2; done; /kitchen"  # Перевіряємо, чи готовий Kafka
 
 volumes:
   zookeeper-volume:
