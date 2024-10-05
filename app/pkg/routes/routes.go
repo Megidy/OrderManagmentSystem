@@ -6,5 +6,6 @@ import (
 )
 
 var InitRoutes = func(router *gin.Engine) {
-	router.POST("/order", producer.HandleCreateOrder)
+	router.POST("/order/create", producer.HandleCreateOrder)
+	router.GET("/orders", producer.HandleCheckOrders)
 }
