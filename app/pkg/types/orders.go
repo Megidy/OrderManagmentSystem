@@ -10,13 +10,17 @@ type Dish struct {
 }
 
 type Order struct {
-	CustomerId int       `json:"customer_id"`
 	OrderId    int       `json:"order_id"`
+	CustomerId int       `json:"customer_id"`
 	Dishes     []Dish    `json:"dishes"`
 	Created    time.Time `json:"created"`
 	Status     string    `json:"status"`
 }
 type CreateOrder struct {
 	Dishes []Dish `json:"dishes"`
-	Status string `json:"status"`
+}
+
+type CheckOrder struct {
+	OrderId int
+	Status  string
 }
