@@ -1,12 +1,8 @@
 package types
 
-import "time"
-
-type OrderServices interface {
-	CreateOrder(Order) error
-	GetOrder(Order) (Order, error)
-	SendOrder(Order) error
-}
+import (
+	"time"
+)
 
 type Dish struct {
 	Name     string `json:"name"`
@@ -14,8 +10,13 @@ type Dish struct {
 }
 
 type Order struct {
-	CustomersId string    `json:"id"`
-	Dishes      []Dish    `json:"dishes"`
-	Created     time.Time `json:"created"`
-	Status      string    `json:"status"`
+	CustomerId int       `json:"customer_id"`
+	OrderId    int       `json:"order_id"`
+	Dishes     []Dish    `json:"dishes"`
+	Created    time.Time `json:"created"`
+	Status     string    `json:"status"`
+}
+type CreateOrder struct {
+	Dishes []Dish `json:"dishes"`
+	Status string `json:"status"`
 }
