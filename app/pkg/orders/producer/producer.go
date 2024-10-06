@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strconv"
 
 	"github.com/IBM/sarama"
 	"github.com/Megidy/OrderManagmentSystem/pkg/db"
@@ -14,7 +15,8 @@ import (
 )
 
 const (
-	Topic string = "orders"
+	Topic1 string = "orders"
+	Topic2 string = "Kitchen"
 )
 
 func HandleCreateOrder(c *gin.Context) {
@@ -38,13 +40,19 @@ func HandleCreateOrder(c *gin.Context) {
 		Status:     "pending",
 	}
 
+	customer := types.Customer{
+		OrderId: orderId,
+	}
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("Order", strconv.Itoa(customer.OrderId), 3600*24*10, "", "", false, true)
+
 	orderInBytes, err := json.Marshal(order)
 	if err != nil {
 		utils.HandleError(c, err, "failed to marshal body ", http.StatusInternalServerError, nil)
 		return
 	}
 
-	err = PushOrderToQueue(Topic, orderInBytes, "Create_order")
+	err = PushMessageToQueue(Topic1, orderInBytes, "Create_order")
 	if err != nil {
 		utils.HandleError(c, err, "failed to push order ", http.StatusInternalServerError, nil)
 		return
@@ -62,11 +70,71 @@ func HandleCreateOrder(c *gin.Context) {
 
 }
 
+func HandleTakeOrder(c *gin.Context) {
+	customer, ok := c.Get("customer")
+	if !ok {
+		utils.HandleError(c, nil, "you dont have orders", http.StatusBadRequest, nil)
+		return
+	}
+
+	customerInBytes, err := json.Marshal(customer)
+	if err != nil {
+		utils.HandleError(c, err, "failed to marshal data", http.StatusInternalServerError, nil)
+		return
+	}
+	order, err := db.GetOrder(customer.(*types.Customer).OrderId, 0)
+	if err != nil {
+		utils.HandleError(c, err, "failed GetOrder", http.StatusInternalServerError, nil)
+		return
+	}
+	order.Dishes, err = db.GetDishes(customer.(*types.Customer).OrderId)
+	if err != nil {
+		utils.HandleError(c, err, "failed GetDishes", http.StatusInternalServerError, nil)
+		return
+	}
+	if order.Status != "completed" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"you order is not ready yet": ":(",
+		})
+		return
+	}
+	err = PushMessageToQueue(Topic2, customerInBytes, "Take_order")
+	if err != nil {
+		utils.HandleError(c, err, "failed to marshal data", http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": " you took your order",
+		"order":   order,
+	})
+
+}
+
+func HandlerCheckCusatomersOrder(c *gin.Context) {
+	customer, ok := c.Get("customer")
+	if !ok {
+		utils.HandleError(c, nil, "you dont have orders", http.StatusBadRequest, nil)
+		return
+	}
+
+	orders, err := db.CheckcustomersOrdersStatus(customer.(*types.Customer).OrderId)
+	if err != nil {
+		utils.HandleError(c, err, "failed to  CheckcustomersOrdersStatus", http.StatusInternalServerError, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"your orders": orders,
+	})
+
+}
+
 func HandleCheckOrders(c *gin.Context) {
 
 	checkOrders, err := db.CheckOrdersStatus()
 	if err != nil {
-		utils.HandleError(c, err, "failed to get CheckOrderStatus", http.StatusInternalServerError, nil)
+		utils.HandleError(c, err, "failed to CheckOrderStatus", http.StatusInternalServerError, nil)
 		return
 	}
 
@@ -85,7 +153,7 @@ func ConnectProducer(brokers []string) (sarama.SyncProducer, error) {
 
 }
 
-func PushOrderToQueue(topic string, message []byte, key string) error {
+func PushMessageToQueue(topic string, message []byte, key string) error {
 	brokers := []string{"kafka:9092"}
 	producer, err := ConnectProducer(brokers)
 	if err != nil {
