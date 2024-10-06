@@ -14,6 +14,14 @@ docker compose up --build
 
 this will automaticly build the project with docker and connect zooker, kafka and mysql services.
 
+To create database and tables you have execute mysql service :
+
+docker exec -it ordermanagmentsystem-mysql-1 mysql -uroot -ppassword
+
+Create db and tables :
+
+create database ordermanagmentsystem_db;use ordermanagmentsystem_db;create table orders(order_id INT PRIMARY KEY,customer_id INT ,created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,status ENUM('pending', 'in_progress', 'completed', 'taken') NOT NULL);create table dishes(order_id INT  ,name VARCHAR(255),quantity INT);
+
 to test manually :
 
 1 POST make order:   http://localhost:8080/order/create
