@@ -56,6 +56,17 @@ services:
       - kafka
     command: >
       sh -c "until nc -z kafka 9092; do echo waiting for kafka; sleep 2; done; /kitchen"  # Перевіряємо, чи готовий Kafka
+  
+  pickup:
+    build:
+      context: . 
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8080"
+    depends_on:
+      - kafka
+    command: >
+      sh -c "until nc -z kafka 9092; do echo waiting for kafka; sleep 2; done; /pickup"  # Перевіряємо, чи готовий Kafka
 
 volumes:
   zookeeper-volume:
